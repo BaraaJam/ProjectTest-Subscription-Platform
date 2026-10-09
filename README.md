@@ -129,11 +129,12 @@ cd subscription-api
 ### Subscriptions (`/api/v1/subscriptions`)
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/subscriptions` | `USER` | Subscribe to an active plan |
-| `GET` | `/api/v1/subscriptions/my` | `USER` | View authenticated user's subscriptions |
-| `PUT` | `/api/v1/subscriptions/{id}/change`| `USER` | Change plan within same operator & service type |
-| `PUT` | `/api/v1/subscriptions/{id}/cancel`| `USER` | Cancel an active subscription |
-| `GET` | `/api/v1/subscriptions` | `ADMIN` | List all subscriptions in the platform |
+| `POST` | `/api/v1/subscriptions/customer/{customerId}` | `USER`, `ADMIN` | Subscribe customer to an active plan |
+| `GET` | `/api/v1/subscriptions/customer/{customerId}` | `USER`, `ADMIN` | View customer's subscriptions |
+| `GET` | `/api/v1/subscriptions/{id}` | `USER`, `ADMIN` | Get subscription details by ID |
+| `PUT` | `/api/v1/subscriptions/{id}/plan` | `USER`, `ADMIN` | Change plan within same operator & service type |
+| `DELETE` | `/api/v1/subscriptions/{id}` | `USER`, `ADMIN` | Cancel an active subscription |
+| `GET` | `/api/v1/subscriptions` | `ADMIN` | List all subscriptions across platform |
 
 ---
 
