@@ -1,232 +1,165 @@
-![Lexicon Logo](https://lexicongruppen.se/media/wi5hphtd/lexicon-logo.svg)
+# Subscription Management Platform API
 
-# ProjectTest – Subscription Platform
+[![Java 25](https://img.shields.io/badge/Java-25-orange.svg)](https://www.oracle.com/java/)
+[![Spring Boot 4](https://img.shields.io/badge/Spring%20Boot-4.0.3-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Project Type:** Backend REST API (Spring Boot + JPA)
-
-## Overview
-
-You will extend and complete an existing backend project for a **Subscription Management Platform**.  
-The system allows service providers to offer subscription plans, while customers can browse plans and manage their
-subscriptions.
-
-Your implementation must follow the functional and technical requirements described below.
+A production-ready REST API for multi-operator telecommunications subscription management built with Spring Boot, Spring Data JPA, Spring Security (JWT), MySQL, and Redis.
 
 ---
 
-## Scenario
+## Architecture & Features
 
-You are building a backend for a **subscription management platform** used by multiple service providers (**operators**).
-
-Operators offer subscription plans in two categories:
-
-### Internet Services
-
-- Fiber 50
-- Fiber 100
-- Fiber 300
-
-### Mobile Services
-
-- Mobile Basic
-- Mobile Plus
-- Mobile Unlimited
-
-Each operator maintains its own catalog of plans.
-
-Each plan contains:
-
-- Name
-- Price
-- Service type (Internet or Mobile)
-- Optional data limit
-- Active/Inactive status
-
-Customers can:
-
-- Register and manage their profile
-- Browse operators and active plans
-- Subscribe to plans
-- Change plans
-- Cancel subscriptions
+- **Multi-Tenant Operators & Plans**: Catalog of Internet (Fiber) and Mobile plans per telecom operator.
+- **Business Invariant Enforcement**:
+  - Maximum of **one active subscription per service type** (`INTERNET`, `MOBILE`) per customer.
+  - Plan changes restricted to the **same operator and service type**.
+  - Cancellation auditing with immutable timestamp preservation.
+- **Security & Token Blacklisting**: Stateless JWT authentication with Redis-backed token invalidation on logout.
+- **Auditing & Clean Architecture**: Entity audit timestamps (`createdAt`, `updatedAt`), DTO/Entity decoupling with MapStruct, centralized `@RestControllerAdvice` error handling.
+- **Automated Seeding**: Default accounts (`ADMIN`, `USER`), telecom operators (Telia, Tele2), and active/inactive plans loaded on startup.
 
 ---
 
-## Business Rules
+## Tech Stack
 
-- A customer may have **at most one active subscription per service type**:
-    - One Internet subscription
-    - One Mobile subscription
-
-- A subscription is created with status **ACTIVE**
-- Cancelled subscriptions must store a cancellation date
-- Only **active plans** are visible and subscribable
-- Plan changes are allowed **only within the same operator and same service type**
-
-Violations of these rules must result in meaningful custom exceptions.
-
----
-
-## Actors
-
-| Actor        | Responsibilities                          |
-|--------------|-------------------------------------------|
-| **Admin**    | Create and manage operators and plans     |
-| **Customer** | Browse plans and manage own subscriptions |
+| Component | Technology |
+| :--- | :--- |
+| **Language & Runtime** | Java 25 |
+| **Framework** | Spring Boot 4.0.3 |
+| **Persistence** | Spring Data JPA (Hibernate), MySQL 8.0 |
+| **Caching & Invalidation** | Redis (Docker) |
+| **Security** | Spring Security 6 (Stateless JWT + JJWT) |
+| **Object Mapping** | MapStruct 1.6.3 |
+| **Documentation** | SpringDoc OpenAPI 3 / Swagger UI |
+| **Build & Containerization** | Maven, Docker Compose |
 
 ---
 
-### Domain Analysis
+## Domain Model
 
 ```mermaid
 erDiagram
-    CUSTOMER ||--o{ SUBSCRIPTION: has
-    PLAN ||--o{ SUBSCRIPTION: used_by
-    OPERATOR ||--o{ PLAN: offers
-    CUSTOMER ||--|| CUSTOMER_DETAIL: has
+    OPERATOR ||--o{ PLAN : offers
+    CUSTOMER ||--o{ SUBSCRIPTION : holds
+    PLAN ||--o{ SUBSCRIPTION : applies_to
+    CUSTOMER ||--|| CUSTOMER_DETAIL : has
+
+    OPERATOR {
+        Long id PK
+        String name UK
+        LocalDateTime createdAt
+    }
+
+    PLAN {
+        Long id PK
+        Long operator_id FK
+        String name UK
+        BigDecimal price
+        ServiceType serviceType
+        Integer dataLimit
+        Boolean active
+        LocalDateTime createdAt
+        LocalDateTime updatedAt
+    }
+
+    SUBSCRIPTION {
+        Long id PK
+        Long customer_id FK
+        Long plan_id FK
+        SubscriptionStatus status
+        LocalDateTime startDate
+        LocalDateTime cancelledDate
+        LocalDateTime createdAt
+        LocalDateTime updatedAt
+    }
 ```
-## Entity Requirements
-
-- Define JPA relationships and ownership
-- Add required fields to `Plan` and `Subscription`
-- Use enums where applicable (service type, subscription status)
-- Enable auditing (`createdAt`, `updatedAt`)
-- Add constraints (unique, not null, length, etc.)
-
----
-
-## Service Layer
-
-- Implement services for all domain operations
-- Use `@Transactional` on write operations
-- Enforce business rules inside services
-- Throw custom exceptions for invalid operations
-
----
-
-## DTOs, Mapping & Validation
-
-- Use DTOs (records recommended)
-- Do **not** expose entities in controllers
-- Use validation annotations (`@NotNull`, `@NotBlank`, etc.)
-- Convert between Entity and DTO using MapStruct or manual mappers
-
----
-
-## REST API & Security
-
-- Controllers for **Plan** and **Subscription**
-- Role-based access:
-  - ADMIN → manage operators & plans
-  - CUSTOMER → manage own subscriptions
-- Return correct HTTP status codes
-- Global exception handling
-- (Optional) Swagger annotations
-
-### Required API Functionality
-
-Expose endpoints that support the following operations.
-
-#### Plan API
-
-**ADMIN must be able to:**
-- Create a plan
-- Update a plan
-- Delete a plan
-- View all plans (active and inactive)
-
-**CUSTOMER must be able to:**
-- View all active plans
-- View active plans by service type (Internet / Mobile)
-- View plans belonging to a specific operator
-
----
-
-#### Subscription API
-
-**CUSTOMER must be able to:**
-- Subscribe to a plan
-- View their own subscriptions
-- Change subscription plan
-- Cancel subscription
-
-The API must enforce the business rules defined in this document (for example: one active subscription per service type).
-
----
-
-
-## Seed Data
-
-Initialize:
-
-- At least 2 operators
-- Multiple plans per operator
-- Both active and inactive plans
-
----
-
-## (Optional) Testing
-
-- Unit tests for repositories
-- Unit tests for services
-- Controller tests
-
----
-
-## ✅ Submission Checklist
-
-- GitHub repository link: [ProjectTest-Subscription-Platform](https://github.com/BaraaJam/ProjectTest-Subscription-Platform.git)
-- `pom.xml` contains required dependencies
-- Entities and relationships implemented
-- Services, transactions, and exceptions
-- DTOs and validation
-- Swagger UI accessible
-- README with run instructions
-- Seed data included
-
----
-
-## Technical Stack & Requirements
-
-* **Java 25**
-* **Spring Boot 4.x**
-* **Spring Data JPA** (Hibernate)
-* **Spring Security** (JWT Authentication)
-* **MySQL 8.0** (Database)
-* **Redis** (Token Blacklisting)
-* **MapStruct** (Object Mapping)
-* **Lombok** (Boilerplate reduction)
-* **Swagger/OpenAPI 3** (API Documentation)
-* **Maven** (Build Tool)
-* **Docker & Docker Compose** (Infrastructure)
-
-### Prerequisites
-
-Before running the application, ensure you have the following installed:
-
-* [JDK 25](https://www.oracle.com/java/technologies/downloads/)
-* [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 ---
 
 ## Getting Started
 
-### 1. Infrastructure Setup (Database & Redis)
+### 1. Prerequisites
+- [JDK 25](https://www.oracle.com/java/technologies/downloads/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-The project uses Docker Compose to manage the MySQL database and Redis server.
-
-Make sure **Docker Desktop is running**, then open a terminal in the **project root directory** (where `docker-compose.yml` is located) and run:
+### 2. Infrastructure Setup
+Start the MySQL database (port `3307`) and Redis cache (port `6379`):
 
 ```bash
 docker-compose up -d
 ```
 
-### 2. Run the Application
+### 3. Run the Application
+Navigate to the API module and run the Spring Boot service:
 
-Navigate to the `subscription-api` directory and run `SubscriptionApiApplication.java`
+```bash
+cd subscription-api
+./mvnw spring-boot:run
+```
 
+---
 
-### 3. API Documentation
+## API Endpoints
 
-Once the app is running, access the Swagger UI at:
-`http://localhost:8080/swagger-ui.html`
+### Authentication (`/api/v1/auth`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/auth/login` | Public | Authenticates and returns JWT token |
+| `POST` | `/api/v1/auth/logout` | Authenticated | Blacklists JWT in Redis |
+
+### Operators (`/api/v1/operators`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/operators` | `ADMIN` | Create new operator |
+| `GET` | `/api/v1/operators` | `USER`, `ADMIN` | List all operators |
+| `GET` | `/api/v1/operators/{id}` | `USER`, `ADMIN` | Get operator by ID |
+
+### Plans (`/api/v1/plans`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/plans` | `ADMIN` | Create a new plan |
+| `PUT` | `/api/v1/plans/{id}` | `ADMIN` | Update plan details |
+| `DELETE` | `/api/v1/plans/{id}` | `ADMIN` | Delete a plan |
+| `GET` | `/api/v1/plans` | `ADMIN` | View all plans (active & inactive) |
+| `GET` | `/api/v1/plans/active` | `USER`, `ADMIN` | View all active plans |
+| `GET` | `/api/v1/plans/active/type/{type}` | `USER`, `ADMIN` | Filter active plans by `INTERNET` or `MOBILE` |
+| `GET` | `/api/v1/plans/active/operator/{id}`| `USER`, `ADMIN` | Filter active plans by operator |
+
+### Subscriptions (`/api/v1/subscriptions`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/subscriptions/customer/{customerId}` | `USER`, `ADMIN` | Subscribe customer to an active plan |
+| `GET` | `/api/v1/subscriptions/customer/{customerId}` | `USER`, `ADMIN` | View customer's subscriptions |
+| `GET` | `/api/v1/subscriptions/{id}` | `USER`, `ADMIN` | Get subscription details by ID |
+| `PUT` | `/api/v1/subscriptions/{id}/plan` | `USER`, `ADMIN` | Change plan within same operator & service type |
+| `DELETE` | `/api/v1/subscriptions/{id}` | `USER`, `ADMIN` | Cancel an active subscription |
+| `GET` | `/api/v1/subscriptions` | `ADMIN` | List all subscriptions across platform |
+
+---
+
+## Interactive API Documentation
+
+Once the application is running, OpenAPI / Swagger documentation is available at:
+- **Swagger UI:** [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- **OpenAPI JSON:** [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
+
+---
+
+## Seed Accounts for Testing
+
+| Role | Email | Password | Permissions |
+| :--- | :--- | :--- | :--- |
+| **Admin** | `admin@example.com` | `password` | Operator & Plan Management, Global Audits |
+| **Customer** | `user@example.com` | `password` | Browsing plans, Managing own subscriptions |
+
+---
+
+## Running Automated Tests
+
+Execute unit and integration tests across all layers:
+
+```bash
+cd subscription-api
+./mvnw clean test
+```
